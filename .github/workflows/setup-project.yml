@@ -1,0 +1,56 @@
+name: Setup Novo Projeto
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Nome do Projeto'
+        required: true
+        type: string
+      drive_folder_id:
+        description: 'ID da pasta raiz no Google Drive'
+        required: true
+        type: string
+      linear_team_id:
+        description: 'ID do time no Linear'
+        required: true
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: |
+          pip install requests google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+
+      - name: Criar estrutura Google Drive
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          PROJECT_NAME: ${{ inputs.project_name }}
+          PARENT_FOLDER_ID: ${{ inputs.drive_folder_id }}
+        run: |
+          python scripts/create_drive_folders.py
+
+      - name: Criar projeto no Linear
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          PROJECT_NAME: ${{ inputs.project_name }}
+          TEAM_ID: ${{ inputs.linear_team_id }}
+        run: |
+          python scripts/create_linear_project.py
+
+      - name: Configurar repositório
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_NAME: ${{ inputs.project_name }}
+        run: |
+          python scripts/setup_repository.py
